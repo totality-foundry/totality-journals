@@ -161,18 +161,22 @@ api/                (new package)
 
 <h3>2. Config (same opt-in pattern as Slack/Save/Mail)</h3>
 <pre>[global]
-api-addr = :8081          ; empty/absent = disabled (default)
-api-auth-token = &lt;token&gt;  ; optional bearer token, empty = no auth (local/trusted net only)
+api-addr = :8081           ; empty/absent = disabled (default)
+api-history-size = 200     ; max executions kept in memory, per job (default 200)
 </pre>
-<p>Equivalent CLI flags on <code>daemon</code>: <code>--api-addr</code>, <code>--api-auth-token</code> — mirrors the existing <code>--docker</code>/<code>--docker-filter</code> flag style.</p>
+<p>Equivalent CLI flags on <code>daemon</code>: <code>--api-addr</code>, <code>--api-history-size</code> — mirrors the existing <code>--docker</code>/<code>--docker-filter</code> flag style.</p>
+<p><strong>v1 explicitly excludes:</strong> auth (trusted/internal network only for now), persistence across restarts (history is in-memory, cleared on restart — same lifetime as the process today), and bulk/tag-based "run all" (deferred, per #198 commenters' own v2 suggestion).</p>
 
 <h3>3. History: make the dead field real</h3>
 <p>
 <code>core/job.go</code> already declares <code>history []*Execution</code> on <code>BareJob</code> — currently unused, nothing
 appends to it. Plan: append each <code>*Execution</code> in <code>jobWrapper.stop()</code> (<code>core/scheduler.go</code>),
-capped ring buffer (default last 50 runs per job, configurable), no disk persistence in v1 — restart clears history, same
-lifetime as the process today. If durable history is wanted later, back it with the existing <code>Save</code> middleware's
-on-disk JSON dumps instead of inventing a new store.
+capped ring buffer, <strong>per job, default 200 executions</strong> (configurable via <code>api-history-size</code>), no
+disk persistence in v1. Per-job (not a global total) so a noisy <code>@every 1m</code> job can't evict history for a
+daily/weekly job — at 200/job that's ~3.3h of scrollback for a 1-minute job, 8+ days for hourly, ~200 days for daily,
+which covers "did it run / did it fail recently" without unbounded memory growth from large stdout/stderr buffers
+(circbuf cap is already 10MB/stream per <code>core/common.go</code>). If durable history is wanted later, back it with
+the existing <code>Save</code> middleware's on-disk JSON dumps instead of inventing a new store.
 </p>
 
 <h3>4. Manual trigger</h3>
@@ -279,11 +283,12 @@ exit status 1</pre>
   <li><strong>Optional follow-up:</strong> propose upstream as a PR against #58/#198 once validated internally — resolves both with an opt-in, minimal-surface design that matches what maintainers/commenters said they'd actually accept.</li>
 </ol>
 
-<h2>Open questions for review</h2>
+<h2>v1 scope — decided</h2>
 <ul>
-  <li>Auth: bearer token in v1 is the minimum viable guard. Fine for a trusted internal network; do we need anything stronger (e.g. mTLS) for your deployment target?</li>
-  <li>History depth: default last 50 runs/job in memory — enough, or should v1 also read the <code>Save</code> middleware's on-disk logs when present, for durability across restarts?</li>
-  <li>Bulk "run all jobs matching X" was requested in #198 but explicitly deferred by commenters to a v2 tagging feature — confirm we're deferring it too.</li>
+  <li><strong>No auth</strong> — trusted/internal network only for now.</li>
+  <li><strong>No persistence across restarts</strong> — in-memory history only, same process lifetime as everything else today.</li>
+  <li><strong>No bulk run</strong> — single-job trigger only; bulk/tag-based "run all" deferred per #198 commenters' own v2 suggestion.</li>
+  <li><strong>History cap: 200 executions, per job</strong> (not a global total) — a noisy <code>@every 1m</code> job can't evict history for a daily/weekly job. 200/job covers ~3.3h scrollback for minutely jobs, 8+ days for hourly, ~200 days for daily. Configurable via <code>api-history-size</code> if it needs to move later.</li>
 </ul>
 
 <footer>totality-journals · internal design doc, not for upstream submission as-is</footer>
