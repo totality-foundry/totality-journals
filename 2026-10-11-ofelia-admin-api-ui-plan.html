@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ofelia: optional admin API + UI — plan</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    max-width: 880px;
+    margin: 3rem auto;
+    padding: 0 1.5rem 6rem;
+    background: #0f1115;
+    color: #e6e6e6;
+    line-height: 1.65;
+  }
+  h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
+  h2 { font-size: 1.2rem; margin-top: 2.5rem; border-top: 1px solid #262a33; padding-top: 1.5rem; }
+  h3 { font-size: 1rem; color: #cfd3da; margin-top: 1.5rem; }
+  p.sub { color: #9a9a9a; margin-top: 0; }
+  p, li { color: #c7cad1; }
+  a { color: #7db8ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  code { background: #1c1f26; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+  pre {
+    background: #1c1f26;
+    border: 1px solid #262a33;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.45rem 0.7rem; border-bottom: 1px solid #262a33; }
+  th { color: #9a9a9a; font-weight: 600; }
+  .status { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; margin-right: 0.4rem; vertical-align: middle; }
+  .ok { background: #3ecf6e; }
+  .fail { background: #e5534b; }
+  .disabled-note {
+    background: #1c1f26;
+    border-left: 3px solid #7db8ff;
+    padding: 0.8rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin: 1rem 0;
+    font-size: 0.92rem;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #9a9a9a;
+    border: 1px solid #333945;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    margin-left: 0.5rem;
+  }
+
+  /* --- mockup frames --- */
+  .mockup-wrap { margin: 1.5rem 0 3rem; }
+  .mockup-caption { color: #8c90990; font-size: 0.85rem; margin-bottom: 0.6rem; color:#9a9a9a; }
+  .browser-frame {
+    border: 1px solid #2a2f3a;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #0b0c10;
+  }
+  .browser-bar {
+    background: #15171d;
+    padding: 0.5rem 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-bottom: 1px solid #2a2f3a;
+  }
+  .browser-bar .dot { width: 9px; height: 9px; border-radius: 50%; background: #333945; }
+  .browser-bar .url {
+    margin-left: 0.6rem;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+  .app {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    padding: 1.4rem 1.6rem;
+    font-size: 0.85rem;
+  }
+  .app h1 { font-family: -apple-system, sans-serif; font-size: 1rem; margin: 0 0 1rem; color: #e6e6e6; letter-spacing: 0.01em; }
+  .app .crumb { color: #6b7280; font-size: 0.8rem; margin-bottom: 1rem; }
+  .app .crumb a { color: #7db8ff; }
+  .jobtable { width: 100%; border-collapse: collapse; }
+  .jobtable th { text-align: left; color: #6b7280; font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0 0.6rem 0.5rem; border-bottom: 1px solid #22262f; }
+  .jobtable td { padding: 0.55rem 0.6rem; border-bottom: 1px solid #1a1d24; }
+  .jobtable tr:hover td { background: #14161b; }
+  .jobtable a { color: #e6e6e6; }
+  .jobtable a:hover { color: #7db8ff; }
+  .pill { font-size: 0.7rem; padding: 0.1rem 0.5rem; border-radius: 999px; border: 1px solid #333945; color: #9a9a9a; }
+  .pill.ok { color: #3ecf6e; border-color: #1f4a2e; }
+  .pill.fail { color: #e5534b; border-color: #4a1f1f; }
+  .pill.running { color: #e8c547; border-color: #4a421f; }
+  .run-btn {
+    font-family: inherit;
+    font-size: 0.78rem;
+    background: #1c1f26;
+    color: #e6e6e6;
+    border: 1px solid #333945;
+    border-radius: 6px;
+    padding: 0.35rem 0.8rem;
+    cursor: default;
+  }
+  .run-btn.primary { background: #2a6edb; border-color: #2a6edb; color: white; }
+  .detail-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; }
+  .detail-meta { color: #6b7280; font-size: 0.78rem; margin-bottom: 1.2rem; }
+  .detail-meta code { background: #1c1f26; }
+  .section-label { color: #6b7280; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; margin: 1.3rem 0 0.5rem; }
+  footer { margin-top: 4rem; color: #555; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+
+<h1>ofelia: optional admin API + UI <span class="badge">plan v1</span></h1>
+<p class="sub">Scoped from <a href="https://github.com/mcuadros/ofelia">mcuadros/ofelia</a>. For review before any code is written.</p>
+
+<h2>Problem &amp; prior art</h2>
+<p>
+Ofelia has no runtime introspection and no way to fire a job outside its cron schedule. This is a known, long-standing
+gap in the upstream project (<a href="https://github.com/mcuadros/ofelia/issues/58">#58 "web ui"</a>,
+<a href="https://github.com/mcuadros/ofelia/issues/198">#198 "Manually run job"</a>,
+<a href="https://github.com/mcuadros/ofelia/issues/101">#101 "No purty UI?"</a>) — open since 2018/2019, no PRs ever
+attempted, and a maintainer confirmed "Ofelia has no UI unfortunately." Several commenters explicitly said a
+<strong>read-only</strong> history view would already satisfy them. This is open ground, not a competing effort.
+</p>
+
+<h2>Decision: in-binary optional feature, not a sidecar</h2>
+<p>
+Ofelia already has a clean precedent for optional subsystems that are off by default:
+</p>
+<ul>
+  <li><code>middlewares.NewSave/NewSlack/NewMail</code> — each returns <code>nil</code> (no-op) if its config struct is empty. Always called, inert unless configured.</li>
+  <li><code>DockerHandler</code> label-watching — a real background goroutine, only started with the <code>--docker</code> CLI flag on <code>DaemonCommand</code>.</li>
+</ul>
+<p>We follow the same shape for the admin API/UI: a new optional subsystem, present in the same binary/image, dormant unless explicitly configured.</p>
+
+<div class="disabled-note">
+<strong>Default behavior is unchanged.</strong> No new port is opened, no new goroutine starts, unless the user sets <code>api-addr</code> (INI) or passes <code>--api-addr</code> (flag). Zero new attack surface for existing deployments.
+</div>
+
+<h2>Shape of the change</h2>
+
+<h3>1. New <code>api</code> package</h3>
+<pre>cli/
+  daemon.go        (+ a few lines: construct + start API if configured)
+  config.go        (+ ApiConfig struct, same squash pattern as SlackConfig/SaveConfig)
+api/                (new package)
+  server.go         net/http server, JSON handlers
+  history.go        in-memory ring buffer of recent Executions per job
+  static/           embedded UI (go:embed), ultra-minimal HTML/CSS/JS, no build step
+</pre>
+
+<h3>2. Config (same opt-in pattern as Slack/Save/Mail)</h3>
+<pre>[global]
+api-addr = :8081          ; empty/absent = disabled (default)
+api-auth-token = &lt;token&gt;  ; optional bearer token, empty = no auth (local/trusted net only)
+</pre>
+<p>Equivalent CLI flags on <code>daemon</code>: <code>--api-addr</code>, <code>--api-auth-token</code> — mirrors the existing <code>--docker</code>/<code>--docker-filter</code> flag style.</p>
+
+<h3>3. History: make the dead field real</h3>
+<p>
+<code>core/job.go</code> already declares <code>history []*Execution</code> on <code>BareJob</code> — currently unused, nothing
+appends to it. Plan: append each <code>*Execution</code> in <code>jobWrapper.stop()</code> (<code>core/scheduler.go</code>),
+capped ring buffer (default last 50 runs per job, configurable), no disk persistence in v1 — restart clears history, same
+lifetime as the process today. If durable history is wanted later, back it with the existing <code>Save</code> middleware's
+on-disk JSON dumps instead of inventing a new store.
+</p>
+
+<h3>4. Manual trigger</h3>
+<p>
+<code>POST /api/jobs/{name}/run</code> invokes the same path a cron fire takes — build an <code>Execution</code> +
+<code>Context</code> and call <code>jobWrapper.Run()</code> (or factor its body into a reusable <code>RunNow(j Job)</code> on
+<code>Scheduler</code>) outside of the cron ticker. No new execution logic — reuses the existing middleware chain
+(Overlap/Slack/Save/Mail all still apply).
+</p>
+
+<h3>5. API surface (v1, minimal)</h3>
+<table>
+<tr><th>Method</th><th>Path</th><th>Returns</th></tr>
+<tr><td>GET</td><td><code>/api/jobs</code></td><td>name, type, schedule, next run, last status, running?</td></tr>
+<tr><td>GET</td><td><code>/api/jobs/{name}</code></td><td>job detail + last N executions (id, start, duration, exit status, stdout/stderr size)</td></tr>
+<tr><td>GET</td><td><code>/api/jobs/{name}/executions/{id}/log</code></td><td>raw stdout/stderr for one run (from in-memory circbuf, same data already captured today)</td></tr>
+<tr><td>POST</td><td><code>/api/jobs/{name}/run</code></td><td>triggers immediately, returns the new execution id</td></tr>
+</table>
+<p>No edit/delete/create endpoints in v1 — matches what #101/#58 commenters actually asked for ("read-only... would mean a world to me"), and avoids re-implementing config management as a second source of truth next to the INI/labels.</p>
+
+<h3>6. UI</h3>
+<p>Two screens only, as scoped. Server-rendered or a single embedded static HTML+fetch() page — no framework, no build step, no bundler; consistent with keeping ofelia a single small Go binary. Mockups below.</p>
+
+<h2>UI mockups</h2>
+
+<div class="mockup-wrap">
+  <div class="mockup-caption">Screen 1 — Summary (all loaded jobs)</div>
+  <div class="browser-frame">
+    <div class="browser-bar">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <div class="url">ofelia-host:8081/</div>
+    </div>
+    <div class="app">
+      <h1>ofelia</h1>
+      <table class="jobtable">
+        <tr><th>Job</th><th>Type</th><th>Schedule</th><th>Next run</th><th>Last run</th><th>Status</th><th></th></tr>
+        <tr>
+          <td><a href="#">nightly-backup</a></td><td>job-exec</td><td>0 2 * * *</td><td>in 6h 12m</td><td>8h ago</td>
+          <td><span class="pill ok">ok</span></td>
+          <td><button class="run-btn">Run now</button></td>
+        </tr>
+        <tr>
+          <td><a href="#">log-rotate</a></td><td>job-local</td><td>@every 1h</td><td>in 41m</td><td>19m ago</td>
+          <td><span class="pill ok">ok</span></td>
+          <td><button class="run-btn">Run now</button></td>
+        </tr>
+        <tr>
+          <td><a href="#">report-export</a></td><td>job-run</td><td>0 */6 * * *</td><td>in 3h 2m</td><td>3h ago</td>
+          <td><span class="pill fail">failed</span></td>
+          <td><button class="run-btn">Run now</button></td>
+        </tr>
+        <tr>
+          <td><a href="#">db-vacuum</a></td><td>job-exec</td><td>0 4 * * 0</td><td>in 2d 9h</td><td>running…</td>
+          <td><span class="pill running">running</span></td>
+          <td><button class="run-btn" disabled>Run now</button></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="mockup-wrap">
+  <div class="mockup-caption">Screen 2 — Job detail (history + manual trigger)</div>
+  <div class="browser-frame">
+    <div class="browser-bar">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <div class="url">ofelia-host:8081/jobs/report-export</div>
+    </div>
+    <div class="app">
+      <div class="crumb"><a href="#">← all jobs</a></div>
+      <div class="detail-head">
+        <h1 style="margin:0">report-export</h1>
+        <button class="run-btn primary">Run now</button>
+      </div>
+      <div class="detail-meta">
+        type <code>job-run</code> &nbsp;·&nbsp; schedule <code>0 */6 * * *</code> &nbsp;·&nbsp; next run in 3h 2m
+      </div>
+
+      <div class="section-label">Recent executions</div>
+      <table class="jobtable">
+        <tr><th>Started</th><th>Duration</th><th>Trigger</th><th>Status</th><th></th></tr>
+        <tr><td>10-11 02:00:04</td><td>42s</td><td>schedule</td><td><span class="pill fail">failed</span></td><td><a href="#">view log</a></td></tr>
+        <tr><td>10-10 20:00:01</td><td>38s</td><td>schedule</td><td><span class="pill ok">ok</span></td><td><a href="#">view log</a></td></tr>
+        <tr><td>10-10 14:00:02</td><td>40s</td><td>manual</td><td><span class="pill ok">ok</span></td><td><a href="#">view log</a></td></tr>
+        <tr><td>10-10 08:00:01</td><td>37s</td><td>schedule</td><td><span class="pill ok">ok</span></td><td><a href="#">view log</a></td></tr>
+      </table>
+
+      <div class="section-label">Log — 10-11 02:00:04 (failed)</div>
+      <pre style="margin-top:0">$ report-export.sh
+Connecting to warehouse...
+ERROR: connection refused (10.0.4.12:5432)
+exit status 1</pre>
+    </div>
+  </div>
+</div>
+
+<h2>Build phases</h2>
+<ol>
+  <li><strong>Core:</strong> wire up <code>history</code> ring buffer in <code>core/scheduler.go</code>; add <code>Scheduler.RunNow(name string)</code>.</li>
+  <li><strong>API:</strong> new <code>api</code> package, JSON handlers over the above, config-gated start in <code>cli/daemon.go</code>.</li>
+  <li><strong>UI:</strong> single embedded HTML page (go:embed), vanilla JS fetch, the two screens above.</li>
+  <li><strong>Tests:</strong> handler tests (httptest, matching existing <code>slack_test.go</code> style), scheduler RunNow test.</li>
+  <li><strong>Docs:</strong> README section documenting <code>api-addr</code>/<code>api-auth-token</code>, off-by-default callout.</li>
+  <li><strong>Optional follow-up:</strong> propose upstream as a PR against #58/#198 once validated internally — resolves both with an opt-in, minimal-surface design that matches what maintainers/commenters said they'd actually accept.</li>
+</ol>
+
+<h2>Open questions for review</h2>
+<ul>
+  <li>Auth: bearer token in v1 is the minimum viable guard. Fine for a trusted internal network; do we need anything stronger (e.g. mTLS) for your deployment target?</li>
+  <li>History depth: default last 50 runs/job in memory — enough, or should v1 also read the <code>Save</code> middleware's on-disk logs when present, for durability across restarts?</li>
+  <li>Bulk "run all jobs matching X" was requested in #198 but explicitly deferred by commenters to a v2 tagging feature — confirm we're deferring it too.</li>
+</ul>
+
+<footer>totality-journals · internal design doc, not for upstream submission as-is</footer>
+
+</body>
+</html>
